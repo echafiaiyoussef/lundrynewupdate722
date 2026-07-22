@@ -92,6 +92,28 @@ const ensureUUID = (str: string): string => {
   return `${rawHex.slice(0, 8)}-${rawHex.slice(8, 12)}-${rawHex.slice(12, 16)}-${rawHex.slice(16, 20)}-${rawHex.slice(20, 32)}`;
 };
 
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try {
+      return crypto.randomUUID();
+    } catch (e) {
+      // Fallback if randomUUID fails (e.g. HTTP non-secure context)
+    }
+  }
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    try {
+      return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c: number) =>
+        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+      );
+    } catch (e) {}
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 const normalizePhone = (phone: string): string => {
   if (!phone) return '';
   // Remove all non-numeric characters
@@ -1829,7 +1851,7 @@ const App: React.FC = () => {
     if (isNaN(parsedPrice) || parsedPrice < 0) return alert('يرجى إدخال سعر صحيح (0 أو أكثر)');
 
     const finalPkg: SubscriptionPackage = {
-      id: editingPackageId || crypto.randomUUID(),
+      id: editingPackageId || generateUUID(),
       name: nameTrimmed,
       total_items: parsedTotalItems,
       price: parsedPrice,
@@ -2531,7 +2553,7 @@ const App: React.FC = () => {
     const laundryId = ensureUUID(userProfile?.laundry_id || 'laund-unknown');
     const expiryIso = safeAddDaysISO(pkg.duration_days);
 
-    const subId = crypto.randomUUID();
+    const subId = generateUUID();
     const newSub: any = {
       id: subId,
       customer_name: isDbMultiTenant ? showAssignSubModal.name : `${laundryId}|${showAssignSubModal.name}`,
@@ -3356,7 +3378,7 @@ const App: React.FC = () => {
         if (pkg) {
           const expiryIso = safeAddDaysISO(pkg.duration_days);
 
-          const subId = crypto.randomUUID();
+          const subId = generateUUID();
           const newSub: any = {
             id: subId,
             customer_name: isDbMultiTenant ? newOrder.customer_name : `${laundryId}|${newOrder.customer_name}`,
